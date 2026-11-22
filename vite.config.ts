@@ -1,2 +1,10 @@
 import { defineConfig } from 'vite';
-export default defineConfig({base:'./',build:{target:'es2022'}});
+
+// base: './' is load-bearing: the bundle runs unmodified under /g/flingdom/ on the site and
+// at the root in dev (design §12).
+export default defineConfig({
+  base: './',
+  server: { port: 5194, host: '127.0.0.1' },
+  preview: { port: 4194 },
+  build: { target: 'es2022' },
+});

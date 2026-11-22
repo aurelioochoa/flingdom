@@ -1,9 +1,9 @@
-# Commercial License for Gatecrash
+# Commercial License for Flingdom
 
-Gatecrash is published under the [PolyForm Noncommercial License 1.0.0](./LICENSE.md).
+Flingdom is published under the [PolyForm Noncommercial License 1.0.0](./LICENSE.md).
 That license covers **noncommercial use only**.
 
-## You need a paid commercial license if you will make money with Gatecrash
+## You need a paid commercial license if you will make money with Flingdom
 
 Any use intended to generate revenue requires a separate written commercial
 license from the licensor. This includes, without limitation:

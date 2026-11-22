@@ -1,63 +1,58 @@
-// Grid helpers for authoring towers (§B): every block is placed by its bottom edge on the
-// top edge of what it stands on, so a tower starts exactly touching — no overlaps for the
-// solver to push apart, no gaps for a block to drop into.
+// Grid helpers for authoring towers (§B): every block is placed by its bottom edge on the top
+// edge of what it stands on, at Box2D's resting gap, so a tower starts exactly touching: no
+// overlaps for the solver to push apart, no gaps for a block to drop into.
 
 import { BALLOON, BALLOON_GAP, REST_GAP } from '../sim/constants.js';
-import type { BlockDef, Material, Pt } from '../sim/types.js';
+import type { BlockData, Material, Point } from '../sim/types.js';
 
-export const COL = 0.5; // column thickness
-export const SLAB = 0.5; // plank thickness
-export const PANE = 0.3; // crystal pane thickness
+const COLUMN = 0.5;
+const SLAB = 0.5;
+const PANE = 0.3;
 
 export class Tower {
-  readonly blocks: BlockDef[] = [];
-  readonly balloons: Pt[] = [];
-  private motif = 0;
+  readonly blocks: BlockData[] = [];
+  readonly balloons: Point[] = [];
 
-  /**
-   * A block centred on cx standing on a surface at `bottom` (at Box2D's resting gap above
-   * it). Returns its top edge, the surface the next block stands on.
-   */
-  box(material: Material, cx: number, bottom: number, w: number, h: number): number {
-    const y0 = bottom + REST_GAP;
-    this.blocks.push({ x: cx, y: y0 + h / 2, w, h, material, motif: this.motif++ % 3 });
-    return y0 + h;
+  /** A block centred on center standing on a surface at `bottom`. Returns its top: the next surface. */
+  block(material: Material, center: number, bottom: number, width: number, height: number): number {
+    const lowest = bottom + REST_GAP;
+    this.blocks.push({ x: center, y: lowest + height / 2, width, height, material, motif: this.blocks.length % 3 });
+    return lowest + height;
   }
 
-  /** An upright column. */
-  col(cx: number, bottom: number, h: number, material: Material = 'wood', w = COL): number {
-    return this.box(material, cx, bottom, w, h);
+  column(center: number, bottom: number, height: number, material: Material = 'wood', width = COLUMN): number {
+    return this.block(material, center, bottom, width, height);
   }
 
-  /** A flat plank or lid. */
-  plank(cx: number, bottom: number, w: number, material: Material = 'wood', h = SLAB): number {
-    return this.box(material, cx, bottom, w, h);
+  plank(center: number, bottom: number, width: number, material: Material = 'wood', height = SLAB): number {
+    return this.block(material, center, bottom, width, height);
   }
 
   /**
-   * Two columns `span` apart (centre to centre) under a roof `roof` wide. Returns the top of
-   * the roof and the underside a balloon presses against.
+   * Two columns `span` apart (centre to centre) under a roof. Returns the top of the roof and
+   * the underside a balloon presses up against.
    */
-  arch(
-    cx: number,
-    bottom: number,
-    o: { span: number; height: number; roof: number; col?: Material; top?: Material; colW?: number; roofH?: number },
-  ): { top: number; under: number } {
-    const colW = o.colW ?? COL;
-    this.col(cx - o.span / 2, bottom, o.height, o.col ?? 'wood', colW);
-    this.col(cx + o.span / 2, bottom, o.height, o.col ?? 'wood', colW);
-    const under = bottom + o.height;
-    const top = this.plank(cx, under, o.roof, o.top ?? 'wood', o.roofH ?? SLAB);
-    return { top, under };
+  arch(center: number, bottom: number, span: number, height: number, roof: number, roofMaterial: Material = 'wood', columnMaterial: Material = 'wood'): { top: number; under: number } {
+    this.column(center - span / 2, bottom, height, columnMaterial);
+    this.column(center + span / 2, bottom, height, columnMaterial);
+    const under = bottom + REST_GAP + height;
+    // Crystal is a thin pane; wood and marble roofs are slabs.
+    return { top: this.plank(center, under, roof, roofMaterial, roofMaterial === 'crystal' ? PANE : SLAB), under: under + REST_GAP };
   }
 
-  /** A balloon pressed up against an underside at height `under`, exactly touching. */
-  balloonUnder(x: number, under: number): void {
-    this.balloons.push({ x, y: under - BALLOON.radius - BALLOON_GAP });
+  /**
+   * The Thud's lever (§7a): a marble lid on a wooden pedestal whose left edge is at `left`,
+   * its weight just 0.3 m inside that edge and a balloon under its right overhang. Only a
+   * heavy drop on the left end tips it over the edge.
+   */
+  lever(left: number, bottom: number): void {
+    const top = this.column(left + 0.5, bottom, 2.2, 'wood', 1);
+    this.plank(left + 0.3, top, 4, 'marble');
+    this.balloonUnder(left + 1.65, top + REST_GAP);
   }
 
-  /** A balloon resting on a floor at height `floor` (for bays where it is held sideways). */
-  balloonAt(x: number, y: number): void {
-    this.balloons.push({ x, y });
+  /** A balloon floating up against an underside at `under`, exactly touching it. */
+  balloonUnder(center: number, under: number): void {
+    this.balloons.push({ x: center, y: under - BALLOON.radius - BALLOON_GAP });
   }
 }

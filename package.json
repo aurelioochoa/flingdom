@@ -1,6 +1,30 @@
 {
- "name":"flingdom", "version":"1.0.0", "private":true, "type":"module", "license":"PolyForm-Noncommercial-1.0.0",
- "scripts":{"dev":"vite","test":"vitest run","build":"tsc --noEmit && vite build && node scripts/check-licenses.mjs","smoke":"node scripts/smoke.mjs","solve":"tsx scripts/solve.ts","spike":"node scripts/physics-spike.mjs"},
- "dependencies":{"planck":"1.4.2"},
- "devDependencies":{"@types/node":"24.10.1","matter-js":"0.20.0","playwright":"1.65.0","tsx":"4.20.6","typescript":"5.9.3","vite":"8.2.2","vitest":"4.1.11"}
+  "name": "flingdom",
+  "version": "1.0.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/check-licenses.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "solve": "tsx scripts/solve.ts",
+    "spike": "node scripts/physics-spike.mjs"
+  },
+  "dependencies": {
+    "planck": "1.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "matter-js": "0.20.0",
+    "playwright": "1.65.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
+  }
 }

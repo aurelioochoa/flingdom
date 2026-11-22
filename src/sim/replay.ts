@@ -1,66 +1,43 @@
-// Headless replays in the real engine (§B): the level's gates, `npm run solve` and the
-// determinism tests all play shots through this one function, so what the tests prove is
-// what the solver searched.
+// Headless replays in the real engine (§B): the level gates, `npm run solve` and the
+// determinism tests all play shots through this one function, so what the tests prove is what
+// the solver searched.
 
-import { SHOT_CAP } from './constants.js';
-import type { LevelDef, Shot } from './types.js';
-import { FlingSim } from './world.js';
-
-export interface ShotOutcome {
-  /** Indices of every balloon freed by the time this shot's world settled (cumulative). */
-  freed: number[];
-  /** Steps waited for the world to sleep before this shot could fire. */
-  waited: number;
-}
+import { SHOT_WAIT_STEPS } from './constants.js';
+import { FlingSim } from './sim.js';
+import type { LevelData, Shot } from './types.js';
 
 export interface Replay {
   sim: FlingSim;
-  outcomes: ShotOutcome[];
+  /** The balloons freed by the time each shot's world settled (cumulative, sorted). */
+  freedAfter: number[][];
   complete: boolean;
-  flings: number;
 }
 
-function freedSet(sim: FlingSim): number[] {
-  return sim.balloons.filter((b) => b.freed).map((b) => b.index);
-}
+const freedIndices = (sim: FlingSim) => sim.balloons.filter((balloon) => balloon.freed).map((balloon) => balloon.index);
 
-/** Step until the world sleeps and the next pom is in the ribbon, at most SHOT_CAP steps. */
-export function waitForReady(sim: FlingSim, cap = SHOT_CAP): number {
-  let n = 0;
-  while (n < cap && sim.phase !== 'done' && !(sim.phase === 'ready' && sim.settled())) {
-    sim.step();
-    n++;
-  }
-  // The cap passed with the tower still rocking: the pom must at least be in the ribbon.
-  while (sim.phase !== 'ready' && sim.phase !== 'done' && n < cap * 2) {
-    sim.step();
-    n++;
-  }
-  return n;
+/** Step until the world sleeps with a pom in the ribbon, waiting at most SHOT_WAIT_STEPS. */
+export function waitForShot(sim: FlingSim): void {
+  for (let waited = 0; sim.phase !== 'done' && (sim.phase !== 'ready' || (!sim.settled() && waited < SHOT_WAIT_STEPS)); waited++) sim.step();
 }
 
 /**
  * Play shots from a fresh world: each fires once the world sleeps (8 s cap), a trick taps at
- * its recorded step, and after the last shot the world gets the same chance to settle.
- * Stops early once every balloon is free.
+ * its recorded step, and after the last shot the world gets the same chance to settle. Stops
+ * as soon as every balloon is free.
  */
-export function playShots(level: LevelDef, shots: readonly Shot[], sim = new FlingSim(level)): Replay {
-  const outcomes: ShotOutcome[] = [];
+export function playShots(level: LevelData, shots: readonly Shot[]): Replay {
+  const sim = new FlingSim(level);
+  const freedAfter: number[][] = [];
   for (const shot of shots) {
+    waitForShot(sim);
     if (sim.complete) break;
-    const waited = waitForReady(sim);
-    if (sim.complete) break;
-    if (!sim.fire(shot.angle, shot.power)) throw new Error('replay: no pom ready to fire');
-    for (let n = 0; n < SHOT_CAP && sim.phase === 'flight'; n++) {
-      if (shot.tap !== undefined && sim.sinceLaunch === shot.tap) sim.trick();
+    sim.fire(shot.angle, shot.power);
+    for (let waited = 0; waited < SHOT_WAIT_STEPS && sim.phase === 'flight'; waited++) {
+      if (shot.tap === sim.stepsSinceLaunch) sim.trick();
       sim.step();
     }
-    let settle = 0;
-    while (settle < SHOT_CAP && !sim.complete && !sim.settled()) {
-      sim.step();
-      settle++;
-    }
-    outcomes.push({ freed: freedSet(sim), waited });
+    for (let waited = 0; waited < SHOT_WAIT_STEPS && !sim.complete && !sim.settled(); waited++) sim.step();
+    freedAfter.push(freedIndices(sim));
   }
-  return { sim, outcomes, complete: sim.complete, flings: sim.flings };
+  return { sim, freedAfter, complete: sim.complete };
 }
